@@ -14,9 +14,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'RAMPART',
       theme: AppTheme.darkTheme,
-      initialRoute: '/detail',
+      initialRoute: '/login',
       routes: {
-        '/detail': (_) => const LoginScreen(),
+        '/login': (_) => const LoginScreen(),
         // '/splash': (_) => const SplashPage(),
         // '/login': (_) => const LoginPage(),
         // '/register': (_) => const RegisterPage(),

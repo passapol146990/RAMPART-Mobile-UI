@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isRecaptchaVerified = false;
 
   // ใช้สีจาก Theme แทนการกำหนดแบบ hardcode
   Color get _backgroundColor => Theme.of(context).scaffoldBackgroundColor;
@@ -43,6 +44,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
+      // ตรวจสอบว่ายืนยัน reCAPTCHA แล้วหรือยัง
+      if (!_isRecaptchaVerified) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'กรุณายืนยันตัวตนด้วย reCAPTCHA ก่อน',
+              style: GoogleFonts.kanit(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = true;
       });
@@ -324,37 +339,107 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildRecaptchaSection() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: ClipRRect(
+    return Container(
+      decoration: BoxDecoration(
+        color: _isRecaptchaVerified
+            ? Colors.green.withOpacity(0.1)
+            : Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        child: RecaptchaV2(
-          apiKey: "6LdhIt0rAAAAACD9j6QUdMZALFZgLIrnufqGfX9g",
-          apiSecret: "6LdhIt0rAAAAAKwSNAcmGbaVpeSEp3OA2L8ncWcB",
-          controller: recaptchaV2Controller,
-          onVerifiedError: (err) {
-            print("reCAPTCHA Error: $err");
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text("reCAPTCHA Error: $err")));
-          },
-          onVerifiedSuccessfully: (success) {
-            setState(() {
-              if (success) {
-                print("reCAPTCHA verified successfully");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Verified successfully!")),
-                );
-              } else {
-                print("reCAPTCHA verification failed");
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Verification failed")),
-                );
-              }
-            });
-          },
-          pluginURL: 'https://recaptcha-flutter-plugin.firebaseapp.com/',
+        border: Border.all(
+          color: _isRecaptchaVerified
+              ? Colors.green
+              : Colors.white.withOpacity(0.2),
+          width: 1.5,
         ),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Icon(
+                  _isRecaptchaVerified
+                      ? Icons.check_circle
+                      : Icons.verified_user_outlined,
+                  color: _isRecaptchaVerified ? Colors.green : _cyanColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _isRecaptchaVerified
+                        ? 'ยืนยันตัวตนสำเร็จ ✓'
+                        : 'กรุณายืนยันว่าคุณไม่ใช่บอท',
+                    style: GoogleFonts.kanit(
+                      color: _isRecaptchaVerified ? Colors.green : _textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (_isRecaptchaVerified)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isRecaptchaVerified = false;
+                      });
+                    },
+                    child: Text(
+                      'รีเซ็ต',
+                      style: GoogleFonts.kanit(color: _cyanColor, fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // reCAPTCHA Widget
+          if (!_isRecaptchaVerified)
+            Container(
+              height: 450,
+              padding: const EdgeInsets.all(8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: RecaptchaV2(
+                  apiKey: "6LdhIt0rAAAAACD9j6QUdMZALFZgLIrnufqGfX9g",
+                  apiSecret: "6LdhIt0rAAAAAKwSNAcmGbaVpeSEp3OA2L8ncWcB",
+                  controller: recaptchaV2Controller,
+                  onVerifiedError: (err) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'เกิดข้อผิดพลาด: $err',
+                          style: GoogleFonts.kanit(),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  },
+                  onVerifiedSuccessfully: (success) {
+                    setState(() {
+                      _isRecaptchaVerified = success;
+                    });
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'ยืนยันตัวตนสำเร็จ! ✓',
+                            style: GoogleFonts.kanit(),
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  pluginURL:
+                      'https://recaptcha-flutter-plugin.firebaseapp.com/',
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
